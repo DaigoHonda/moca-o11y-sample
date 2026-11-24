@@ -1,0 +1,12 @@
+{
+  "name": "moca-o11y-sample",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {},
+  "scripts": {
+    "start": "node server.mjs",
+    "build": "npx --yes esbuild@0.25.0 app.js --minify --sourcemap=external --outfile=dist/app.min.js",
+    "sourcemaps:upload": "npx --yes @sentry/cli@3.8.2 sourcemaps inject ./dist && npx --yes @sentry/cli@3.8.2 sourcemaps upload ./dist"
+  }
+}

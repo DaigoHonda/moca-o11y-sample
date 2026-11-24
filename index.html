@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moca ── Sentry Observability サンプル</title>
+    <style>
+      :root {
+        --bg: #faf7f2;
+        --card: #ffffff;
+        --text: #2c2420;
+        --muted: #6f6259;
+        --border: #e5ddd5;
+        --accent: #6f4e37;
+        --accent-hover: #5a3e2b;
+        --warn: #b45309;
+        --danger: #b91c1c;
+        --ok-bg: #ecfdf5;
+        --ok-text: #065f46;
+        --err-bg: #fef2f2;
+        --err-text: #991b1b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px 48px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 680px;
+        margin: 0 auto;
+        display: grid;
+        gap: 16px;
+      }
+      .header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 1.4rem;
+      }
+      .mode-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.875rem;
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: #efe6dc;
+        color: var(--accent);
+        font-weight: 600;
+      }
+      .badge[data-mode='minified'] {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .product {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 12px;
+        margin-bottom: 16px;
+      }
+      .product-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+      .product-price {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .fields {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      label {
+        display: grid;
+        gap: 4px;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      input[type='email'],
+      input[type='text'] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        color: var(--text);
+        background: #fff;
+      }
+      .hint {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+      .action-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 10px;
+      }
+      button {
+        appearance: none;
+        border: none;
+        border-radius: 8px;
+        padding: 11px 14px;
+        font-size: 0.92rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #fff;
+        background: var(--accent);
+        transition: opacity 0.15s ease, background 0.15s ease;
+      }
+      button:hover:not(:disabled) {
+        background: var(--accent-hover);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      button.warn {
+        background: var(--warn);
+      }
+      button.warn:hover:not(:disabled) {
+        background: #92400e;
+      }
+      button.danger {
+        background: var(--danger);
+      }
+      button.danger:hover:not(:disabled) {
+        background: #991b1b;
+      }
+      .panel {
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: #f5f1eb;
+        font-size: 0.88rem;
+        word-break: break-all;
+      }
+      .panel.ok {
+        background: var(--ok-bg);
+        color: var(--ok-text);
+      }
+      .panel.error {
+        background: var(--err-bg);
+        color: var(--err-text);
+      }
+      .meta-list {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+      }
+      .meta-label {
+        font-weight: 700;
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-bottom: 2px;
+      }
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Moca ── 珈琲豆ストア（Sentry 検証用）</h1>
+        <div class="mode-bar">
+          <span class="badge" data-mode="normal">通常版（/app.js）</span>
+          <a href="/minified" id="mode-switch">縮小版 (/minified) に切り替え</a>
+        </div>
+      </header>
+
+      <section class="card" aria-labelledby="checkout-heading">
+        <div class="product">
+          <span id="checkout-heading" class="product-name">Moca ── エチオピア モカ 200g × 1</span>
+          <span class="product-price">¥1,480</span>
+        </div>
+
+        <div class="fields">
+          <label for="email">
+            メールアドレス（Session Replay マスキング確認用）
+            <input id="email" type="email" value="moca-user@example.com" autocomplete="email" />
+          </label>
+          <label for="memo">
+            配送メモ（Session Replay マスキング確認用）
+            <input id="memo" type="text" value="置き配希望" />
+          </label>
+          <p class="hint">
+            ※ <code>maskAllText: true</code> のため、Sentry Replay 上では入力値やテキストがマスクされます。
+          </p>
+        </div>
+
+        <div class="actions">
+          <div class="action-group">
+            <button id="btn-buy" type="button">購入する（正常）</button>
+            <button id="btn-slow" type="button" class="warn">遅いAPIで購入する（400ms）</button>
+          </div>
+          <div class="action-group">
+            <button id="btn-handled" type="button" class="danger">
+              決済エラー（captureException / handled）
+            </button>
+            <button id="btn-unhandled" type="button" class="danger">
+              未処理の例外（onerror / unhandled）
+            </button>
+            <button id="btn-rejection" type="button" class="danger">
+              Promiseの拒否（unhandledrejection / unhandled）
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="meta-list">
+          <div>
+            <div class="meta-label">Sentry SDK 状態</div>
+            <div id="sdk-status" class="panel">設定を読み込み中...</div>
+          </div>
+          <div>
+            <div class="meta-label">実行結果</div>
+            <div id="status" class="panel">操作待ちです。上のボタンを押してください。</div>
+          </div>
+          <div>
+            <div class="meta-label">直近の trace_id</div>
+            <div id="trace-info" class="panel">まだトレースは発生していません。</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
